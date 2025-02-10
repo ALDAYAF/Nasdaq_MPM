@@ -1,0 +1,28 @@
+from flask import Flask, request, jsonify
+import yfinance as yf
+import pandas as pd
+
+app = Flask(__name__)
+
+@app.route('/download_nasdaq_data', methods=['GET'])
+def download_nasdaq_data():
+    tickers = request.args.get("tickers", "AAPL").split(",")
+    start_date = request.args.get("start", "2023-01-01")
+    end_date = request.args.get("end", "2024-01-01")
+    file_path = request.args.get("file", "nasdaq_data.xlsx")
+    
+    try:
+        stock_data = yf.download(tickers, start=start_date, end=end_date, group_by='ticker')
+        with pd.ExcelWriter(file_path) as writer:
+            if isinstance(stock_data, dict):
+                for ticker, data in stock_data.items():
+                    data.to_excel(writer, sheet_name=ticker)
+            else:
+                stock_data.to_excel(writer, sheet_name="Data")
+        
+        return jsonify({"message": "Data successfully saved to Excel", "file": file_path})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+if __name__ == '__main__':
+    app.run(debug=True)
